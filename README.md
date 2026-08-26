@@ -30,4 +30,7 @@ Learning project for building practical skills in Embedded C, STM32 development,
 
 **M1 – Embedded C**
 
-Currently working on C fundamentals and practical exercises.
+Current issue: #2 – C strings & character data
+
+The C fundamentals baseline assessment has been completed.
+The remaining M1 work is tracked through GitHub Issues.
