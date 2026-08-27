@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 int string_length(const char text[]) {
     int length = 0;
@@ -24,6 +25,15 @@ int main(void) {
     string_to_upper(text);
     printf("Length: %d\n", length);
     printf("Text: %s\n", text);
+
+    size_t strlength = strlen(text);
+    printf("Strlen: %zu\n", strlength);
+
+    char text1[] = "Hello";
+    char text2[] = "Hello";
+    if (strcmp(text1, text2) == 0) {
+        printf("Strings are equal\n");
+    }
 
     return 0;
 }
