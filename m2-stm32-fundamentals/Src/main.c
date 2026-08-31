@@ -24,7 +24,7 @@
 #endif
 
 int main(void) {
-	uint32_t status = app_status_get();
+	app_status_get();
 	/* Loop forever */
 	for (;;)
 		;
