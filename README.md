@@ -28,9 +28,10 @@ Learning project for building practical skills in Embedded C, STM32 development,
 
 ## Current Progress
 
-**M1 – Embedded C**
+**M2 – STM32 Fundamentals**
 
-Current issue: #2 – C strings & character data
+M1 – Embedded C completed.
 
-The C fundamentals baseline assessment has been completed.
-The remaining M1 work is tracked through GitHub Issues.
+Current issue: #10 – Startup and program flow
+
+Detailed progress is tracked through GitHub Issues and Milestones.
