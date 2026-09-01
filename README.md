@@ -28,10 +28,12 @@ Learning project for building practical skills in Embedded C, STM32 development,
 
 ## Current Progress
 
-**M2 – STM32 Fundamentals**
+**M3 – Peripherals & Hardware**
 
 M1 – Embedded C completed.
 
-Current issue: #10 – Startup and program flow
+M2 – STM32 Fundamentals completed.
+
+Current issue: #13 – GPIO fundamentals
 
 Detailed progress is tracked through GitHub Issues and Milestones.
