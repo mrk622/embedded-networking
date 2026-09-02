@@ -19,11 +19,20 @@
 #include <stdint.h>
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
-  #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
+#warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
 
-int main(void)
-{
-    /* Loop forever */
-	for(;;);
+int main(void) {
+	volatile uint32_t *rcc_ahb1enr = (volatile uint32_t*) 0x40023830;
+	*rcc_ahb1enr |= (1U << 1);
+
+	volatile uint32_t *gpiob_moder = (volatile uint32_t*) 0x40020400;
+	*gpiob_moder &= ~(3U << 0);
+	*gpiob_moder |= (1U << 0);
+
+	volatile uint32_t *gpiob_odr = (volatile uint32_t*) 0x40020414;
+	*gpiob_odr |= (1U << 0);
+	/* Loop forever */
+	for (;;)
+		;
 }
