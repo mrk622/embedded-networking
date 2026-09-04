@@ -23,6 +23,8 @@
 #endif
 
 int main(void) {
+	/* ===== GPIO OUTPUTS: LD1 (PB0) AND LD2 (PB7) ===== */
+
 	volatile uint32_t *rcc_ahb1enr = (volatile uint32_t*) 0x40023830; // Pointer auf RCC_AHB1ENR (AHB1 Peripheral Clock Enable Register)
 	*rcc_ahb1enr |= (1U << 1); // Clock für GPIOB aktivieren
 
@@ -37,6 +39,8 @@ int main(void) {
 	*gpiob_moder |= (1U << 14); // PB7 als Output konfigurieren
 	*gpiob_odr |= (1U << 7); // PB7 auf HIGH setzen → LD2 einschalten
 
+	/* ===== ISSUE #13: GPIO INPUT - B1 USER BUTTON ON PC13 ===== */
+
 	*rcc_ahb1enr |= (1U << 2); // Clock für GPIOC aktivieren
 	volatile uint32_t *gpioc_moder = (volatile uint32_t*) 0x40020800; // Pointer auf GPIOC_MODER (GPIOC Mode Register)
 	*gpioc_moder &= ~(3U << 26); // Mode-Bits für PC13 löschen → PC13 als Input konfigurieren
@@ -47,7 +51,19 @@ int main(void) {
 	*gpioc_pupdr &= ~(3U << 26);  // Bits 27:26 löschen
 	*gpioc_pupdr |= (2U << 26);   // PC13 auf Pull-down konfigurieren
 
-	/* Loop forever */
+	/* ===== ISSUE #14: GPIO INTERRUPT - CONNECT PC13 TO EXTI13 ===== */
+
+	volatile uint32_t *syscfg_exticr4 = (volatile uint32_t*) 0x40013814; // Pointer auf SYSCFG_EXTICR4 (External Interrupt Configuration Register)
+	*syscfg_exticr4 &= ~(15U << 4); // Bits löschen
+	*syscfg_exticr4 |= (2U << 4); // Bits für PC13 setzen
+
+	volatile uint32_t *exti_rtsr = (volatile uint32_t*) 0x40013C08; // Pointer auf EXTI_RTSR (Rising Trigger Selection Register)
+	*exti_rtsr |= (1U << 13); // TR13 setzen → steigende Flanke für EXTI13 aktivieren
+
+	volatile uint32_t *exti_imr = (volatile uint32_t*) 0x40013C00; // Pointer auf EXTI_IMR (Interrupt Mask Register)
+	*exti_imr |= (1U << 13); // MR13 setzen → Interrupt Request für EXTI13 erlauben
+
+	/* ===== ISSUE #13: POLLING - CURRENTLY STILL ACTIVE ===== */
 	for (;;) {
 		if (*gpioc_idr & (1U << 13)) { // PC13 prüfen → Bedingung wahr, wenn B1 gedrückt ist
 			*gpiob_odr &= ~(1U << 0); // PB0 auf LOW setzen → LD1 ausschalten
