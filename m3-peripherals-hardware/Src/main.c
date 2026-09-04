@@ -23,16 +23,36 @@
 #endif
 
 int main(void) {
-	volatile uint32_t *rcc_ahb1enr = (volatile uint32_t*) 0x40023830;
-	*rcc_ahb1enr |= (1U << 1);
+	volatile uint32_t *rcc_ahb1enr = (volatile uint32_t*) 0x40023830; // Pointer auf RCC_AHB1ENR (AHB1 Peripheral Clock Enable Register)
+	*rcc_ahb1enr |= (1U << 1); // Clock für GPIOB aktivieren
 
-	volatile uint32_t *gpiob_moder = (volatile uint32_t*) 0x40020400;
-	*gpiob_moder &= ~(3U << 0);
-	*gpiob_moder |= (1U << 0);
+	volatile uint32_t *gpiob_moder = (volatile uint32_t*) 0x40020400; // Pointer auf GPIOB_MODER (GPIOB Mode Register)
+	*gpiob_moder &= ~(3U << 0); // Mode-Bits für PB0 löschen
+	*gpiob_moder |= (1U << 0); // PB0 als Output konfigurieren
 
-	volatile uint32_t *gpiob_odr = (volatile uint32_t*) 0x40020414;
-	*gpiob_odr |= (1U << 0);
+	volatile uint32_t *gpiob_odr = (volatile uint32_t*) 0x40020414; // Pointer auf GPIOB_ODR (GPIOB Output Data Register)
+	*gpiob_odr |= (1U << 0); // PB0 auf HIGH setzen → LD1 einschalten
+
+	*gpiob_moder &= ~(3U << 14); // Mode-Bits für PB7 löschen
+	*gpiob_moder |= (1U << 14); // PB7 als Output konfigurieren
+	*gpiob_odr |= (1U << 7); // PB7 auf HIGH setzen → LD2 einschalten
+
+	*rcc_ahb1enr |= (1U << 2); // Clock für GPIOC aktivieren
+	volatile uint32_t *gpioc_moder = (volatile uint32_t*) 0x40020800; // Pointer auf GPIOC_MODER (GPIOC Mode Register)
+	*gpioc_moder &= ~(3U << 26); // Mode-Bits für PC13 löschen → PC13 als Input konfigurieren
+
+	volatile uint32_t *gpioc_idr = (volatile uint32_t*) 0x40020810; // Pointer auf GPIOC_IDR (GPIOC Input Data Register)
+
+	volatile uint32_t *gpioc_pupdr = (volatile uint32_t*) 0x4002080C; // Pointer auf GPIOC_PUPDR (GPIOC Pull-Up/Pull-Down Register)
+	*gpioc_pupdr &= ~(3U << 26);  // Bits 27:26 löschen
+	*gpioc_pupdr |= (2U << 26);   // PC13 auf Pull-down konfigurieren
+
 	/* Loop forever */
-	for (;;)
-		;
+	for (;;) {
+		if (*gpioc_idr & (1U << 13)) { // PC13 prüfen → Bedingung wahr, wenn B1 gedrückt ist
+			*gpiob_odr &= ~(1U << 0); // PB0 auf LOW setzen → LD1 ausschalten
+		} else {
+			*gpiob_odr |= (1U << 0); // PB0 auf HIGH setzen → LD1 einschalten
+		}
+	}
 }
