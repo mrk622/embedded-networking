@@ -34,6 +34,8 @@ M1 – Embedded C completed.
 
 M2 – STM32 Fundamentals completed.
 
-Current issue: #13 – GPIO fundamentals
+Completed: #13 – GPIO fundamentals
+
+Next issue: #14 – GPIO interrupts
 
 Detailed progress is tracked through GitHub Issues and Milestones.
