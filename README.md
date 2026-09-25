@@ -38,6 +38,7 @@ Learning project for building practical skills in Embedded C, STM32 development,
 **M3 – Peripherals & Hardware**
 
 - Completed: #13 – GPIO fundamentals
-- Current: #14 – GPIO interrupts
+- Completed: #14 – GPIO interrupts
+- Current: #15 – Timers and PWM
 
 Detailed progress is tracked through GitHub Issues and Milestones.
