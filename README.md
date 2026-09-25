@@ -28,14 +28,16 @@ Learning project for building practical skills in Embedded C, STM32 development,
 
 ## Current Progress
 
+### Completed Milestones
+
+- M1 – Embedded C
+- M2 – STM32 Fundamentals
+
+### Current Milestone
+
 **M3 – Peripherals & Hardware**
 
-M1 – Embedded C completed.
-
-M2 – STM32 Fundamentals completed.
-
-Completed: #13 – GPIO fundamentals
-
-Next issue: #14 – GPIO interrupts
+- Completed: #13 – GPIO fundamentals
+- Current: #14 – GPIO interrupts
 
 Detailed progress is tracked through GitHub Issues and Milestones.
