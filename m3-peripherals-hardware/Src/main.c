@@ -22,6 +22,9 @@
 #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
 
+volatile uint32_t *exti_pr = (volatile uint32_t*) 0x40013C14; // Pointer auf EXTI_PR (Pending Register)
+volatile uint32_t button_event = 0;
+
 int main(void) {
 	/* ===== GPIO OUTPUTS: LD1 (PB0) AND LD2 (PB7) ===== */
 
@@ -39,19 +42,19 @@ int main(void) {
 	*gpiob_moder |= (1U << 14); // PB7 als Output konfigurieren
 	*gpiob_odr |= (1U << 7); // PB7 auf HIGH setzen → LD2 einschalten
 
-	/* ===== ISSUE #13: GPIO INPUT - B1 USER BUTTON ON PC13 ===== */
+	/* ===== GPIO INPUT: B1 USER BUTTON ON PC13 ===== */
 
 	*rcc_ahb1enr |= (1U << 2); // Clock für GPIOC aktivieren
 	volatile uint32_t *gpioc_moder = (volatile uint32_t*) 0x40020800; // Pointer auf GPIOC_MODER (GPIOC Mode Register)
 	*gpioc_moder &= ~(3U << 26); // Mode-Bits für PC13 löschen → PC13 als Input konfigurieren
 
-	volatile uint32_t *gpioc_idr = (volatile uint32_t*) 0x40020810; // Pointer auf GPIOC_IDR (GPIOC Input Data Register)
-
 	volatile uint32_t *gpioc_pupdr = (volatile uint32_t*) 0x4002080C; // Pointer auf GPIOC_PUPDR (GPIOC Pull-Up/Pull-Down Register)
 	*gpioc_pupdr &= ~(3U << 26);  // Bits 27:26 löschen
 	*gpioc_pupdr |= (2U << 26);   // PC13 auf Pull-down konfigurieren
 
-	/* ===== ISSUE #14: GPIO INTERRUPT - CONNECT PC13 TO EXTI13 ===== */
+	/* ===== GPIO INTERRUPT: CONNECT PC13 TO EXTI13 ===== */
+	volatile uint32_t *rcc_apb2enr = (volatile uint32_t*) 0x40023844; // Pointer auf RCC_APB2ENR (APB2 Peripheral Clock Enable Register)
+	*rcc_apb2enr |= (1U << 14); // SYSCFGEN setzen → Clock für SYSCFG aktivieren
 
 	volatile uint32_t *syscfg_exticr4 = (volatile uint32_t*) 0x40013814; // Pointer auf SYSCFG_EXTICR4 (External Interrupt Configuration Register)
 	*syscfg_exticr4 &= ~(15U << 4); // Bits löschen
@@ -63,12 +66,20 @@ int main(void) {
 	volatile uint32_t *exti_imr = (volatile uint32_t*) 0x40013C00; // Pointer auf EXTI_IMR (Interrupt Mask Register)
 	*exti_imr |= (1U << 13); // MR13 setzen → Interrupt Request für EXTI13 erlauben
 
-	/* ===== ISSUE #13: POLLING - CURRENTLY STILL ACTIVE ===== */
+	volatile uint32_t *nvic_iser1 = (volatile uint32_t*) 0xE000E104; // Pointer auf NVIC_ISER1 (Interrupt Set-Enable Register 1)
+	*nvic_iser1 |= (1U << 8); // Interrupt für EXTI15_10 im NVIC aktivieren
+
 	for (;;) {
-		if (*gpioc_idr & (1U << 13)) { // PC13 prüfen → Bedingung wahr, wenn B1 gedrückt ist
-			*gpiob_odr &= ~(1U << 0); // PB0 auf LOW setzen → LD1 ausschalten
-		} else {
-			*gpiob_odr |= (1U << 0); // PB0 auf HIGH setzen → LD1 einschalten
+		if (button_event == 1) {
+			*gpiob_odr ^= (1U << 0);
+			button_event = 0;
 		}
+	}
+}
+
+void EXTI15_10_IRQHandler(void) {
+	if (*exti_pr & (1U << 13)) {
+		*exti_pr = (1U << 13);
+		button_event = 1;
 	}
 }
