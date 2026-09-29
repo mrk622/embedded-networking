@@ -25,6 +25,9 @@
 volatile uint32_t *exti_pr = (volatile uint32_t*) 0x40013C14; // Pointer auf EXTI_PR (Pending Register)
 volatile uint32_t button_event = 0;
 
+volatile uint32_t *tim2_sr = (volatile uint32_t*) 0x40000010;
+volatile uint32_t *gpiob_odr = (volatile uint32_t*) 0x40020414; // Pointer auf GPIOB_ODR (GPIOB Output Data Register)
+
 int main(void) {
 	/* ===== GPIO OUTPUTS: LD1 (PB0) AND LD2 (PB7) ===== */
 
@@ -35,7 +38,6 @@ int main(void) {
 	*gpiob_moder &= ~(3U << 0); // Mode-Bits für PB0 löschen
 	*gpiob_moder |= (1U << 0); // PB0 als Output konfigurieren
 
-	volatile uint32_t *gpiob_odr = (volatile uint32_t*) 0x40020414; // Pointer auf GPIOB_ODR (GPIOB Output Data Register)
 	*gpiob_odr |= (1U << 0); // PB0 auf HIGH setzen → LD1 einschalten
 
 	*gpiob_moder &= ~(3U << 14); // Mode-Bits für PB7 löschen
@@ -69,6 +71,26 @@ int main(void) {
 	volatile uint32_t *nvic_iser1 = (volatile uint32_t*) 0xE000E104; // Pointer auf NVIC_ISER1 (Interrupt Set-Enable Register 1)
 	*nvic_iser1 |= (1U << 8); // Interrupt für EXTI15_10 im NVIC aktivieren
 
+	/* ===== TIMER: TIM2 BASIC CONFIGURATION ===== */
+	volatile uint32_t *rcc_apb1enr = (volatile uint32_t*) 0x40023840;
+	*rcc_apb1enr |= (1U << 0); // TIM2EN setzen → Clock für TIM2 aktivieren
+
+	volatile uint32_t *tim2_psc = (volatile uint32_t*) 0x40000028; // Pointer auf TIM2_PSC (Prescaler Register)
+	*tim2_psc = 15999; // 16 MHz / (15999 + 1) = 1 kHz → ein Counter-Schritt pro 1 ms
+
+	volatile uint32_t *tim2_arr = (volatile uint32_t*) 0x4000002C; // Pointer auf TIM2_ARR (Auto-Reload Register)
+	*tim2_arr = 499; // 500 Counter-Schritte × 1 ms = 500 ms pro Timer-Zyklus
+
+	volatile uint32_t *tim2_cr1 = (volatile uint32_t*) 0x40000000; // Pointer auf TIM2_CR1 (Control Register 1)
+
+	volatile uint32_t *tim2_dier = (volatile uint32_t*) 0x4000000C;
+	*tim2_dier |= (1U << 0);
+
+	volatile uint32_t *nvic_iser0 = (volatile uint32_t*) 0xE000E100; // Pointer auf NVIC_ISER0 (Interrupt Set-Enable Register 0)
+	*nvic_iser0 |= (1U << 28); // IRQ 28 setzen → TIM2 Interrupt im NVIC aktivieren
+
+	*tim2_cr1 |= (1U << 0); // CEN setzen → Counter starten
+
 	for (;;) {
 		if (button_event == 1) {
 			*gpiob_odr ^= (1U << 0);
@@ -83,3 +105,11 @@ void EXTI15_10_IRQHandler(void) {
 		button_event = 1;
 	}
 }
+
+void TIM2_IRQHandler(void) {
+	if (*tim2_sr & (1U << 0)) {
+		*gpiob_odr ^= (1U << 7);
+		*tim2_sr &= ~(1U << 0);
+	}
+}
+
