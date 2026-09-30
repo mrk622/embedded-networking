@@ -39,6 +39,7 @@ Learning project for building practical skills in Embedded C, STM32 development,
 
 - Completed: #13 – GPIO fundamentals
 - Completed: #14 – GPIO interrupts
-- Current: #15 – Timers and PWM
+- Completed: #15 – Timers and PWM
+- Current: #16 – UART communication
 
 Detailed progress is tracked through GitHub Issues and Milestones.
