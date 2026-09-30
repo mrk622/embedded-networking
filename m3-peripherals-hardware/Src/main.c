@@ -40,10 +40,13 @@ int main(void) {
 
 	*gpiob_odr |= (1U << 0); // PB0 auf HIGH setzen → LD1 einschalten
 
-	*gpiob_moder &= ~(3U << 14); // Mode-Bits für PB7 löschen
-	*gpiob_moder |= (1U << 14); // PB7 als Output konfigurieren
-	*gpiob_odr |= (1U << 7); // PB7 auf HIGH setzen → LD2 einschalten
-
+	/*
+	 * Alte Konfiguration von PB7 als normaler GPIO-Ausgang.
+	 * Für PWM wird PB7 später als Alternate Function konfiguriert.
+	 */
+//	*gpiob_moder &= ~(3U << 14); // Mode-Bits für PB7 löschen
+//	*gpiob_moder |= (1U << 14); // PB7 als Output konfigurieren
+//	*gpiob_odr |= (1U << 7); // PB7 auf HIGH setzen → LD2 einschalten
 	/* ===== GPIO INPUT: B1 USER BUTTON ON PC13 ===== */
 
 	*rcc_ahb1enr |= (1U << 2); // Clock für GPIOC aktivieren
@@ -83,13 +86,50 @@ int main(void) {
 
 	volatile uint32_t *tim2_cr1 = (volatile uint32_t*) 0x40000000; // Pointer auf TIM2_CR1 (Control Register 1)
 
-	volatile uint32_t *tim2_dier = (volatile uint32_t*) 0x4000000C;
-	*tim2_dier |= (1U << 0);
+	volatile uint32_t *tim2_dier = (volatile uint32_t*) 0x4000000C; // Pointer auf TIM2_DIER (DMA/Interrupt Enable Register)
+	*tim2_dier |= (1U << 0); // UIE (Update Interrupt Enable) setzen → Update-Interrupt erlauben
 
 	volatile uint32_t *nvic_iser0 = (volatile uint32_t*) 0xE000E100; // Pointer auf NVIC_ISER0 (Interrupt Set-Enable Register 0)
 	*nvic_iser0 |= (1U << 28); // IRQ 28 setzen → TIM2 Interrupt im NVIC aktivieren
 
-	*tim2_cr1 |= (1U << 0); // CEN setzen → Counter starten
+	*tim2_cr1 |= (1U << 0); // CEN (Counter Enable) setzen → TIM2 starten
+
+	/* ===== TIMER: TIM4 PWM CONFIGURATION ===== */
+
+	/* TIM4 clock and PWM time base */
+	*rcc_apb1enr |= (1U << 2); // TIM4EN setzen → Clock für TIM4 aktivieren
+
+	volatile uint32_t *tim4_psc = (volatile uint32_t*) 0x40000828; // Pointer auf TIM4_PSC (Prescaler Register)
+	*tim4_psc = 15; // 16 MHz / (15 + 1) = 1 MHz → ein Counter-Schritt pro 1 µs
+
+	volatile uint32_t *tim4_arr = (volatile uint32_t*) 0x4000082C; // Pointer auf TIM4_ARR (Auto-Reload Register)
+	*tim4_arr = 999; // 1000 Counter-Schritte × 1 µs = 1 ms → PWM-Frequenz 1 kHz
+
+	/* PB7: TIM4_CH2 via AF2 */
+	*gpiob_moder &= ~(3U << 14); // Mode-Bits für PB7 löschen
+	*gpiob_moder |= (2U << 14); // PB7 als Alternate Function konfigurieren
+
+	volatile uint32_t *gpiob_afrl = (volatile uint32_t*) 0x40020420; // Pointer auf GPIOB_AFRL (Alternate Function Low Register)
+	*gpiob_afrl &= ~(15U << 28); // Alternate-Function-Bits für PB7 löschen
+	*gpiob_afrl |= (2U << 28); // AF2 (Alternate Function 2) setzen → PB7 mit TIM4_CH2 verbinden
+
+	/* TIM4 Channel 2: PWM mode 1 */
+	volatile uint32_t *tim4_ccmr1 = (volatile uint32_t*) 0x40000818; // Pointer auf TIM4_CCMR1 (Capture/Compare Mode Register 1)
+	*tim4_ccmr1 &= ~(7U << 12); // OC2M[2:0] (Output Compare 2 Mode) löschen
+	*tim4_ccmr1 &= ~(1U << 24); // OC2M[3] löschen
+	*tim4_ccmr1 |= (6U << 12); // OC2M = 0110 → PWM mode 1
+
+	volatile uint32_t *tim4_ccr2 = (volatile uint32_t*) 0x40000838; // Pointer auf TIM4_CCR2 (Capture/Compare Register 2)
+	*tim4_ccr2 = 500; // 500 von 1000 Counter-Schritten HIGH → 50 % Tastgrad
+
+	volatile uint32_t *tim4_ccer = (volatile uint32_t*) 0x40000820; // Pointer auf TIM4_CCER (Capture/Compare Enable Register)
+	*tim4_ccer |= (1U << 4); // CC2E (Capture/Compare 2 Output Enable) setzen → Channel-2-Ausgang aktivieren
+
+	volatile uint32_t *tim4_egr = (volatile uint32_t*) 0x40000814; // Pointer auf TIM4_EGR (Event Generation Register)
+	*tim4_egr |= (1U << 0); // UG (Update Generation) setzen → Update Event erzeugen und Prescaler-Wert übernehmen
+
+	volatile uint32_t *tim4_cr1 = (volatile uint32_t*) 0x40000800; // Pointer auf TIM4_CR1 (Control Register 1)
+	*tim4_cr1 |= (1U << 0); // CEN (Counter Enable) setzen → TIM4 starten
 
 	for (;;) {
 		if (button_event == 1) {
@@ -108,8 +148,8 @@ void EXTI15_10_IRQHandler(void) {
 
 void TIM2_IRQHandler(void) {
 	if (*tim2_sr & (1U << 0)) {
-		*gpiob_odr ^= (1U << 7);
-		*tim2_sr &= ~(1U << 0);
+		// *gpiob_odr ^= (1U << 7); // Alte LD2-Steuerung deaktiviert: PB7 wird jetzt von TIM4_CH2 per PWM gesteuert
+		*tim2_sr &= ~(1U << 0); // UIF (Update Interrupt Flag) löschen
 	}
 }
 
