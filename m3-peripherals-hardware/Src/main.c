@@ -131,6 +131,44 @@ int main(void) {
 	volatile uint32_t *tim4_cr1 = (volatile uint32_t*) 0x40000800; // Pointer auf TIM4_CR1 (Control Register 1)
 	*tim4_cr1 |= (1U << 0); // CEN (Counter Enable) setzen → TIM4 starten
 
+	/* ===== USART3 SERIAL COMMUNICATION VIA ST-LINK VIRTUAL COM PORT ===== */
+	*rcc_apb1enr |= (1U << 18); // USART3EN (USART3 Clock Enable) setzen → Clock für USART3 aktivieren
+	*rcc_ahb1enr |= (1U << 3); // GPIODEN (GPIOD Clock Enable) setzen → Clock für GPIOD aktivieren
+
+	volatile uint32_t *gpiod_moder = (volatile uint32_t*) 0x40020C00;
+	// PD8 und PD9 auf Alternate Function (10) setzen
+	*gpiod_moder &= ~(3U << 16);
+	*gpiod_moder |= (2U << 16);
+	*gpiod_moder &= ~(3U << 18);
+	*gpiod_moder |= (2U << 18);
+
+	volatile uint32_t *gpiod_afrh = (volatile uint32_t*) 0x40020C24;
+	// PD8 und PD9 auf AF7 (Alternate Function 7) für USART3 TX/RX setzen
+	*gpiod_afrh &= ~(15U << 0);
+	*gpiod_afrh |= (7U << 0);
+	*gpiod_afrh &= ~(15U << 4);
+	*gpiod_afrh |= (7U << 4);
+
+	volatile uint32_t *usart3_cr1 = (volatile uint32_t*) 0x40004800; // USART3 Control Register 1
+	volatile uint32_t *usart3_brr = (volatile uint32_t*) 0x4000480C; // USART3 Baud Rate Register
+	*usart3_brr = 139; // Baudrate auf ca. 115200 Baud bei 16 MHz USART3-Takt einstellen
+	*usart3_cr1 |= (1U << 3); // TE (Transmitter Enable) setzen → USART3-Sender aktivieren
+	*usart3_cr1 &= ~((1U << 28) | (1U << 12) | (1U << 10)); // 8 Datenbits (M1:M0 = 00) und Parität deaktivieren (PCE = 0)
+
+	volatile uint32_t *usart3_cr2 = (volatile uint32_t*) 0x40004804; // USART3 Control Register 2
+	*usart3_cr2 &= ~(3U << 12); // STOP[13:12] = 00 → 1 Stopbit konfigurieren
+
+	*usart3_cr1 |= (1U << 0); // UE (USART Enable) setzen → USART3 aktivieren
+
+	volatile uint32_t *usart3_isr = (volatile uint32_t*) 0x4000481C; // USART3 Interrupt and Status Register
+
+	volatile uint32_t *usart3_tdr = (volatile uint32_t*) 0x40004828; // USART3 Transmit Data Register
+
+	while ((*usart3_isr & (1U << 7)) == 0U) {
+		// Warten, bis TXE (Transmit Data Register Empty) = 1 ist
+	}
+	*usart3_tdr = 'B'; // ASCII-Zeichen 'B' zur Übertragung an USART3 übergeben
+
 	for (;;) {
 		if (button_event == 1) {
 			*gpiob_odr ^= (1U << 0);
